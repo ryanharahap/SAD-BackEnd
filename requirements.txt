@@ -6,4 +6,3 @@ tensorflow
 pandas
 nltk
 gunicorn
-pipenv
