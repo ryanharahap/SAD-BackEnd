@@ -64,7 +64,6 @@ class PredictionService:
       # Pad the sequence
       padded = pad_sequences(sequences, padding='post', maxlen=37)
       predictions = self.youtube_model.predict(padded)
-      print(predictions)
       sentiment = "Negative" if predictions[0][0] >= 0.5 else "Positive"
 
       result.append({
