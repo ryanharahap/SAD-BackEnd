@@ -18,9 +18,3 @@
     // or
     uvicorn src.main:app
     ```
-
-## Migration
-- To create a migration after updating database, run this command
-    ```
-    alembic revision --autogenerate -m "migration name"
-    ```
