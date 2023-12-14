@@ -12,7 +12,7 @@ import pandas as pd
 
 current_directory = os.path.dirname(os.path.realpath(__file__))
 playstore_model_path = os.path.join(current_directory, 'ml-model', 'model_playstore_v2.h5')
-youtube_model_path = os.path.join(current_directory, 'ml-model', 'model_youtube_v1.h5')
+youtube_model_path = os.path.join(current_directory, 'ml-model', 'model_youtube_v2.h5')
 news_model_path = os.path.join(current_directory, 'ml-model', 'model_news_v2.h5')
 
 # Load the model from the .pkl file
@@ -60,10 +60,11 @@ class PredictionService:
     for datum in data:
       # Convert to a sequence
       self.tokenizer.fit_on_texts(datum.comment)
-      sequences = self.tokenizer.texts_to_sequences(datum.comment)
+      sequences = self.tokenizer.texts_to_sequences([datum.comment])
       # Pad the sequence
-      padded = pad_sequences(sequences, padding='post', maxlen=37)
+      padded = pad_sequences(sequences, padding='post', maxlen=188)
       predictions = self.youtube_model.predict(padded)
+      print(predictions)
       sentiment = "Negative" if predictions[0][0] >= 0.5 else "Positive"
 
       result.append({
