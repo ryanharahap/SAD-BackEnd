@@ -4,6 +4,7 @@ import os
 from keras.models import load_model
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
+import numpy as np
 import pickle
 import nltk
 from nltk.corpus import stopwords
@@ -14,7 +15,7 @@ from wordcloud import WordCloud
 
 
 current_directory = os.path.dirname(os.path.realpath(__file__))
-playstore_model_path = os.path.join(current_directory, 'ml-model', 'model_playstore_v2.h5')
+playstore_model_path = os.path.join(current_directory, 'ml-model', 'model_playstore_v5.h5')
 youtube_model_path = os.path.join(current_directory, 'ml-model', 'model_youtube_v2.h5')
 news_model_path = os.path.join(current_directory, 'ml-model', 'model_news_v2.h5')
 
@@ -29,7 +30,8 @@ class PredictionService:
     self.playstore_model = load_model(playstore_model_path, compile=False)
     self.youtube_model = load_model(youtube_model_path, compile=False)
     self.news_model = load_model(news_model_path, compile=False)
-    self.tokenizer = Tokenizer()
+    self.tokenizaer = Tokenizer()
+    self.playstore_tokenizer = Tokenizer(num_words=20000, oov_token="<OOV>")
     self.base_url = base_url
   
   def playstore_predict(self, data: List[PlaystoreRequest]):
@@ -39,12 +41,13 @@ class PredictionService:
     negative_count = 0
 
     for datum in data:
-      # Convert to a sequence
-      sequences = self.tokenizer.texts_to_sequences([datum.review])
-      # Pad the sequence
-      padded = pad_sequences(sequences, padding='post', maxlen=200)
+      self.playstore_tokenizer.fit_on_texts(datum.review)
+      sequences = self.playstore_tokenizer.texts_to_sequences(datum.review)
+      padded = pad_sequences(sequences, padding='post', maxlen=100, truncating='post')
       prediction = self.playstore_model.predict(padded)
-      pred_label = 1 if prediction >= 0.5 else 0
+      # average_prediction = np.mean(prediction)
+      # print(average_prediction)
+      pred_label = 1 if prediction[0][0] > 0.5 else 0
       sentiment = "Positive" if pred_label == 1 else "Negative"
 
       if sentiment == 'Positive':
@@ -82,8 +85,8 @@ class PredictionService:
 
     for datum in data:
       # Convert to a sequence
-      self.tokenizer.fit_on_texts(datum.comment)
-      sequences = self.tokenizer.texts_to_sequences([datum.comment])
+      self.tokenizaer.fit_on_texts(datum.comment)
+      sequences = self.tokenizaer.texts_to_sequences([datum.comment])
       # Pad the sequence
       padded = pad_sequences(sequences, padding='post', maxlen=188)
       predictions = self.youtube_model.predict(padded)
@@ -128,7 +131,7 @@ class PredictionService:
       tokenized_text = self.__tokenized(pd.Series([text_to_predict]))
       filtered_text = self.__remove_stopwords(tokenized_text.iloc[0])
 
-      text_seq = self.tokenizer.texts_to_sequences([filtered_text])
+      text_seq = self.tokenizaer.texts_to_sequences([filtered_text])
 
       text_pad = pad_sequences(text_seq, maxlen=22, padding='post')
 
