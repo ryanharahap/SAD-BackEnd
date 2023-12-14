@@ -9,6 +9,9 @@ import nltk
 from nltk.corpus import stopwords
 import re
 import pandas as pd
+import matplotlib.pyplot as plt
+from wordcloud import WordCloud
+
 
 current_directory = os.path.dirname(os.path.realpath(__file__))
 playstore_model_path = os.path.join(current_directory, 'ml-model', 'model_playstore_v2.h5')
@@ -30,6 +33,9 @@ class PredictionService:
   
   def playstore_predict(self, data: List[PlaystoreRequest]):
     result = []
+    reviews = []
+    positive_count = 0
+    negative_count = 0
 
     for datum in data:
       # Convert to a sequence
@@ -39,7 +45,13 @@ class PredictionService:
       prediction = self.playstore_model.predict(padded)
       pred_label = 1 if prediction >= 0.5 else 0
       sentiment = "Positive" if pred_label == 1 else "Negative"
-        
+
+      if sentiment == 'Positive':
+        positive_count += 1
+      else:
+        negative_count += 1
+
+      reviews.append(datum.review)  
       result.append({
         "user": datum.user,
         "review": datum.review,
@@ -49,14 +61,24 @@ class PredictionService:
         "sentiment": sentiment
       })
 
+    wordcloud_url = self.generateWordCloud(reviews)
+    piechart_url = self.generatePieChart([positive_count, negative_count])
+
     return {
       'status': 'success',
-      'predictions': result
+      'predictions': result,
+      'wordcloud_url': wordcloud_url,
+      'piechart_url': piechart_url,
+      'positive_count': positive_count,
+      'negative_count': negative_count
     }
   
   def youtube_predict(self, data: List[YoutubeRequest]):
     result = []
-    
+    comments = []
+    positive_count = 0
+    negative_count = 0
+
     for datum in data:
       # Convert to a sequence
       self.tokenizer.fit_on_texts(datum.comment)
@@ -67,6 +89,12 @@ class PredictionService:
       print(predictions)
       sentiment = "Negative" if predictions[0][0] >= 0.5 else "Positive"
 
+      if sentiment == 'Positive':
+        positive_count += 1
+      else:
+        negative_count += 1
+
+      comments.append(datum.comment)
       result.append({
         "author": datum.author,
         "published_at": datum.published_at,
@@ -76,13 +104,23 @@ class PredictionService:
         "sentiment": sentiment
       })
 
+    wordcloud_url = self.generateWordCloud(comments)
+    piechart_url = self.generatePieChart([positive_count, negative_count])
+
     return {
       'status': 'success',
-      'predictions': result
+      'predictions': result,
+      'wordcloud_url': wordcloud_url,
+      'piechart_url': piechart_url,
+      'positive_count': positive_count,
+      'negative_count': negative_count
     }
   
   def news_predict(self, data: List[NewsRequest]):
     result = []
+    titles = []
+    positive_count = 0
+    negative_count = 0
     
     for datum in data:
       text_to_predict = self.__remove_symbols(datum.title)
@@ -97,6 +135,12 @@ class PredictionService:
 
       sentiment = "Positive" if pred_label > 0.5 else "Negative"
 
+      if sentiment == 'Positive':
+        positive_count += 1
+      else:
+        negative_count += 1
+
+      titles.append(datum.title)
       result.append({
         "title": datum.title,
         "source": datum.source,
@@ -105,9 +149,16 @@ class PredictionService:
         "sentiment": sentiment
       })
 
+    wordcloud_url = self.generateWordCloud(titles)
+    piechart_url = self.generatePieChart([positive_count, negative_count])
+
     return {
       'status': 'success',
-      'predictions': result
+      'predictions': result,
+      'wordcloud_url': wordcloud_url,
+      'piechart_url': piechart_url,
+      'positive_count': positive_count,
+      'negative_count': negative_count
     }
 
   def __remove_symbols(self, text):
@@ -123,3 +174,27 @@ class PredictionService:
   def __remove_stopwords(self, tokens):
       stop_words = set(stopwords.words('indonesian'))
       return [word for word in tokens if word not in stop_words]
+
+  def generateWordCloud(self, text_data: List[str]):
+      all_words = " ".join(text_data)
+      wordcloud = WordCloud(width=800,
+                            height=400,
+                            max_words=200,
+                            colormap='plasma',
+                            background_color='white',
+                            stopwords=stopwords.words('indonesian')).generate(all_words)
+      plt.figure(figsize=(15, 10), facecolor='white')
+      plt.imshow(wordcloud, interpolation='bilinear')
+      plt.axis('off')
+      plt.savefig('static/wordcloud.png')
+
+      return 'http://localhost:8000/static/wordcloud.png'
+
+  def generatePieChart(self, sentiment_counts: List[int]):
+     plt.figure(figsize=(8, 6))
+     plt.pie(sentiment_counts, labels=['Positive', 'Negative'], autopct='%1.1f%%')
+     plt.axis('off')
+     plt.savefig('static/piechart.png')
+
+     return 'http://localhost:8000/static/piechart.png'
+     
