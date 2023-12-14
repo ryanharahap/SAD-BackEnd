@@ -23,13 +23,14 @@ news_model_path = os.path.join(current_directory, 'ml-model', 'model_news_v2.h5'
 #     loaded_model = pickle.load(file)
 
 class PredictionService:
-  def __init__(self):
+  def __init__(self, base_url):
     nltk.download('punkt')
     nltk.download('stopwords')
     self.playstore_model = load_model(playstore_model_path, compile=False)
     self.youtube_model = load_model(youtube_model_path, compile=False)
     self.news_model = load_model(news_model_path, compile=False)
     self.tokenizer = Tokenizer()
+    self.base_url = base_url
   
   def playstore_predict(self, data: List[PlaystoreRequest]):
     result = []
@@ -188,7 +189,7 @@ class PredictionService:
       plt.axis('off')
       plt.savefig('static/wordcloud.png')
 
-      return 'http://localhost:8000/static/wordcloud.png'
+      return f'{self.base_url}static/wordcloud.png'
 
   def generatePieChart(self, sentiment_counts: List[int]):
      plt.figure(figsize=(8, 6))
@@ -196,5 +197,5 @@ class PredictionService:
      plt.axis('off')
      plt.savefig('static/piechart.png')
 
-     return 'http://localhost:8000/static/piechart.png'
+     return f'{self.base_url}static/piechart.png'
      
